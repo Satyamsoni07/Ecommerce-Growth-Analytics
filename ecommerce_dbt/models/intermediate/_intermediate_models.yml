@@ -1,0 +1,223 @@
+version: 2
+
+models:
+  - name: int_order_items_enriched
+    description: Enriched order-item level dataset with product category and seller information.
+
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - order_id
+              - order_item_id
+
+    columns:
+      - name: order_id
+        data_tests:
+          - not_null
+
+      - name: order_item_id
+        data_tests:
+          - not_null
+
+      - name: product_id
+        data_tests:
+          - not_null
+
+      - name: seller_id
+        data_tests:
+          - not_null
+  - name: int_order_payments
+    description: Order-level payment summary aggregated from payment records.
+
+    columns:
+      - name: order_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: total_payment_value
+        data_tests:
+          - not_null
+
+      - name: payment_record_count
+        data_tests:
+          - not_null
+  - name: int_order_items_summary
+    description: Order-level summary of item, product, seller, and freight metrics.
+
+    columns:
+      - name: order_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: item_count
+        data_tests:
+          - not_null
+
+      - name: product_value
+        data_tests:
+          - not_null
+
+      - name: freight_value
+        data_tests:
+          - not_null
+
+      - name: total_item_value
+        data_tests:
+          - not_null
+  - name: int_latest_order_review
+    description: Latest available review retained for each order.
+
+    columns:
+      - name: order_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: review_id
+        data_tests:
+          - not_null
+
+      - name: review_score
+        data_tests:
+          - not_null
+  - name: int_orders_enriched
+    description: Order-level analytical dataset combining customer, item, payment, and latest review information.
+
+    columns:
+      - name: order_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        data_tests:
+          - not_null
+
+      - name: customer_unique_id
+        data_tests:
+          - not_null
+
+      - name: order_purchase_timestamp
+        data_tests:
+          - not_null
+  - name: int_customer_cohorts
+    description: Customer-level cohort assignment based on first delivered order in the reliable analysis period.
+
+    columns:
+      - name: customer_unique_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: first_order_date
+        data_tests:
+          - not_null
+
+      - name: cohort_month
+        data_tests:
+          - not_null
+  - name: int_customer_cohort_activity
+    description: Monthly customer activity used for cohort retention analysis.
+
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - customer_unique_id
+              - activity_month
+
+    columns:
+      - name: customer_unique_id
+        data_tests:
+          - not_null
+
+      - name: cohort_month
+        data_tests:
+          - not_null
+
+      - name: activity_month
+        data_tests:
+          - not_null
+
+      - name: cohort_month_number
+        data_tests:
+          - not_null
+  - name: int_session_funnel
+    description: Session-level funnel model showing whether each website session reached key conversion stages.
+
+    columns:
+      - name: session_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: visitor_id
+        data_tests:
+          - not_null
+
+      - name: session_start
+        data_tests:
+          - not_null
+
+      - name: viewed_product
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+
+      - name: added_to_cart
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+
+      - name: started_checkout
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+
+      - name: purchased
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+  - name: int_website_purchases_enriched
+    description: Synthetic website purchases enriched with session, device, and acquisition channel attributes.
+
+    columns:
+      - name: transaction_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: session_id
+        data_tests:
+          - not_null
+
+      - name: visitor_id
+        data_tests:
+          - not_null
+
+      - name: purchase_timestamp
+        data_tests:
+          - not_null
+
+      - name: purchase_value
+        data_tests:
+          - not_null
+
+      - name: acquisition_channel
+        data_tests:
+          - not_null
+
+      - name: device_type
+        data_tests:
+          - not_null

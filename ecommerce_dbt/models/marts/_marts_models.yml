@@ -1,0 +1,1144 @@
+version: 2
+
+models:
+  - name: fct_orders
+    description: Order-level fact table for business and BI analysis.
+
+    columns:
+      - name: order_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        data_tests:
+          - not_null
+
+      - name: customer_unique_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_unique_id
+
+      - name: order_status
+        data_tests:
+          - not_null
+
+      - name: order_purchase_timestamp
+        data_tests:
+          - not_null
+
+      - name: order_purchase_date
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_day
+
+
+  - name: dim_customers
+    description: Customer dimension containing one row per persistent real customer.
+
+    columns:
+      - name: customer_unique_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: customer_city
+        data_tests:
+          - not_null
+
+      - name: customer_state
+        data_tests:
+          - not_null
+
+
+  - name: dim_products
+    description: Product dimension containing one row per product with category and physical attributes.
+
+    columns:
+      - name: product_id
+        data_tests:
+          - not_null
+          - unique
+
+
+  - name: dim_sellers
+    description: Seller dimension containing one row per seller with location details.
+
+    columns:
+      - name: seller_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: seller_state
+        data_tests:
+          - not_null
+
+
+  - name: fct_order_items
+    description: Item-level fact table for product, seller, price, and freight analysis.
+
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - order_id
+              - order_item_id
+
+    columns:
+      - name: order_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('fct_orders')
+                field: order_id
+
+      - name: order_item_id
+        data_tests:
+          - not_null
+
+      - name: product_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_products')
+                field: product_id
+
+      - name: seller_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_sellers')
+                field: seller_id
+
+
+  - name: dim_date
+    description: Calendar date dimension used for time-series analysis and BI reporting.
+
+    columns:
+      - name: date_day
+        data_tests:
+          - not_null
+          - unique
+
+      - name: year
+        data_tests:
+          - not_null
+
+      - name: year_month
+        data_tests:
+          - not_null
+
+      - name: is_reliable_analysis_period
+        data_tests:
+          - not_null
+  - name: agg_monthly_kpis
+    description: Monthly business KPI summary for delivered orders within the reliable analysis period.
+
+    columns:
+      - name: month_start
+        data_tests:
+          - not_null
+          - unique
+
+      - name: delivered_orders
+        data_tests:
+          - not_null
+
+      - name: active_customers
+        data_tests:
+          - not_null
+
+      - name: product_gmv
+        data_tests:
+          - not_null
+
+      - name: average_order_value
+        data_tests:
+          - not_null
+  - name: agg_customer_metrics
+    description: Customer-level KPI summary for delivered orders within the reliable analysis period.
+
+    columns:
+      - name: customer_unique_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: first_order_date
+        data_tests:
+          - not_null
+
+      - name: last_order_date
+        data_tests:
+          - not_null
+
+      - name: delivered_order_count
+        data_tests:
+          - not_null
+
+      - name: total_gmv
+        data_tests:
+          - not_null
+
+      - name: average_order_value
+        data_tests:
+          - not_null
+  - name: agg_customer_rfm
+    description: Customer-level RFM metrics used for customer segmentation.
+
+    columns:
+      - name: customer_unique_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: recency_days
+        data_tests:
+          - not_null
+
+      - name: frequency
+        data_tests:
+          - not_null
+
+      - name: monetary_value
+        data_tests:
+          - not_null
+  - name: agg_customer_rfm_scored
+    description: Customer-level RFM metrics with recency, frequency, and monetary scores from 1 to 5.
+
+    columns:
+      - name: customer_unique_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: recency_score
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+
+      - name: frequency_score
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+
+      - name: monetary_score
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+  - name: agg_customer_segments
+    description: Customer segmentation table derived from RFM behavior.
+
+    columns:
+      - name: customer_unique_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: customer_segment
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - Champions
+                  - Loyal Repeat Customers
+                  - High-Value Recent
+                  - Promising
+                  - At-Risk High Value
+                  - Hibernating
+                  - Regular Customers
+  - name: agg_cohort_retention
+    description: Cohort-level monthly retention metrics for delivered customers in the reliable analysis period.
+
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - cohort_month
+              - cohort_month_number
+
+    columns:
+      - name: cohort_month
+        data_tests:
+          - not_null
+
+      - name: cohort_month_number
+        data_tests:
+          - not_null
+
+      - name: cohort_size
+        data_tests:
+          - not_null
+
+      - name: retained_customers
+        data_tests:
+          - not_null
+
+      - name: retention_rate
+        data_tests:
+          - not_null
+  - name: agg_customer_ltv
+    description: Customer-level lifetime value proxy metrics based on historical delivered-order behavior.
+
+    columns:
+      - name: customer_unique_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: lifetime_gmv
+        data_tests:
+          - not_null
+
+      - name: lifetime_payment_value
+        data_tests:
+          - not_null
+
+      - name: customer_lifespan_days
+        data_tests:
+          - not_null
+
+      - name: is_repeat_customer
+        data_tests:
+          - not_null
+  - name: agg_segment_ltv
+    description: Customer segment-level lifetime value summary.
+
+    columns:
+      - name: customer_segment
+        data_tests:
+          - not_null
+          - unique
+
+      - name: customer_count
+        data_tests:
+          - not_null
+
+      - name: average_lifetime_gmv
+        data_tests:
+          - not_null
+
+      - name: average_lifetime_payment_value
+        data_tests:
+          - not_null
+
+      - name: repeat_customer_count
+        data_tests:
+          - not_null
+  - name: agg_category_performance
+    description: Product category-level performance summary including sales volume, GMV, freight, pricing, and GMV share.
+
+    columns:
+      - name: product_category
+        data_tests:
+          - not_null
+          - unique
+
+      - name: items_sold
+        data_tests:
+          - not_null
+
+      - name: order_count
+        data_tests:
+          - not_null
+
+      - name: product_gmv
+        data_tests:
+          - not_null
+
+      - name: gmv_share
+        data_tests:
+          - not_null
+  - name: agg_seller_performance
+    description: Seller-level performance summary including sales volume, GMV, freight, pricing, and GMV share.
+
+    columns:
+      - name: seller_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: items_sold
+        data_tests:
+          - not_null
+
+      - name: order_count
+        data_tests:
+          - not_null
+
+      - name: product_gmv
+        data_tests:
+          - not_null
+
+      - name: gmv_share
+        data_tests:
+          - not_null
+  - name: agg_seller_concentration
+    description: Marketplace-level seller concentration metrics based on GMV contribution.
+
+    columns:
+      - name: total_sellers
+        data_tests:
+          - not_null
+
+      - name: top_1_gmv_share
+        data_tests:
+          - not_null
+
+      - name: top_5_gmv_share
+        data_tests:
+          - not_null
+
+      - name: top_10_gmv_share
+        data_tests:
+          - not_null
+
+      - name: top_20_gmv_share
+        data_tests:
+          - not_null
+
+      - name: seller_hhi
+        data_tests:
+          - not_null
+  - name: agg_delivery_experience
+    description: Delivery-status-level customer experience summary using valid post-delivery reviews.
+
+    columns:
+      - name: delivery_status
+        data_tests:
+          - not_null
+          - unique
+          - accepted_values:
+              arguments:
+                values:
+                  - On Time
+                  - Late
+
+      - name: reviewed_orders
+        data_tests:
+          - not_null
+
+      - name: average_review_score
+        data_tests:
+          - not_null
+
+      - name: low_rating_orders
+        data_tests:
+          - not_null
+
+      - name: low_rating_rate
+        data_tests:
+          - not_null
+
+      - name: average_delivery_days
+        data_tests:
+          - not_null
+  - name: agg_state_delivery_performance
+    description: State-level delivery and customer experience summary for delivered orders in the reliable analysis period.
+
+    columns:
+      - name: customer_state
+        data_tests:
+          - not_null
+          - unique
+
+      - name: delivered_orders
+        data_tests:
+          - not_null
+
+      - name: average_delivery_days
+        data_tests:
+          - not_null
+
+      - name: late_orders
+        data_tests:
+          - not_null
+
+      - name: late_delivery_rate
+        data_tests:
+          - not_null
+
+      - name: average_review_score
+        data_tests:
+          - not_null
+
+      - name: low_rating_rate
+        data_tests:
+          - not_null
+  - name: agg_seller_delivery_performance
+    description: Seller-level delivery performance summary for delivered orders in the reliable analysis period.
+
+    columns:
+      - name: seller_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: delivered_orders
+        data_tests:
+          - not_null
+
+      - name: average_delivery_days
+        data_tests:
+          - not_null
+
+      - name: late_orders
+        data_tests:
+          - not_null
+
+      - name: late_delivery_rate
+        data_tests:
+          - not_null
+  - name: agg_category_delivery_performance
+    description: Category-level delivery performance summary for delivered orders in the reliable analysis period.
+
+    columns:
+      - name: product_category
+        data_tests:
+          - not_null
+          - unique
+
+      - name: delivered_orders
+        data_tests:
+          - not_null
+
+      - name: late_orders
+        data_tests:
+          - not_null
+
+      - name: late_delivery_rate
+        data_tests:
+          - not_null
+
+      - name: average_delivery_days
+        data_tests:
+          - not_null
+  - name: agg_category_freight_economics
+    description: Category-level freight economics summary for delivered orders in the reliable analysis period.
+
+    columns:
+      - name: product_category
+        data_tests:
+          - not_null
+          - unique
+
+      - name: order_count
+        data_tests:
+          - not_null
+
+      - name: product_gmv
+        data_tests:
+          - not_null
+
+      - name: freight_value
+        data_tests:
+          - not_null
+
+      - name: freight_to_gmv_ratio
+        data_tests:
+          - not_null
+
+      - name: average_freight_per_item
+        data_tests:
+          - not_null
+  - name: agg_order_seller_complexity
+    description: Comparison of delivered single-seller and multi-seller orders within the reliable analysis period.
+
+    columns:
+      - name: seller_complexity
+        data_tests:
+          - not_null
+          - unique
+          - accepted_values:
+              arguments:
+                values:
+                  - Single Seller
+                  - Multiple Sellers
+
+      - name: delivered_orders
+        data_tests:
+          - not_null
+
+      - name: average_order_value
+        data_tests:
+          - not_null
+
+      - name: average_delivery_days
+        data_tests:
+          - not_null
+
+      - name: late_delivery_rate
+        data_tests:
+          - not_null
+  - name: agg_multi_item_seller_experience
+    description: Controlled comparison of customer experience for multi-item orders fulfilled by single versus multiple sellers.
+
+    columns:
+      - name: seller_complexity
+        data_tests:
+          - not_null
+          - unique
+          - accepted_values:
+              arguments:
+                values:
+                  - Single Seller
+                  - Multiple Sellers
+
+      - name: delivered_orders
+        data_tests:
+          - not_null
+
+      - name: valid_reviewed_orders
+        data_tests:
+          - not_null
+
+      - name: average_review_score
+        data_tests:
+          - not_null
+
+      - name: low_rating_rate
+        data_tests:
+          - not_null
+  - name: agg_funnel_overview
+    description: Overall website conversion funnel summary based on synthetic session behavior.
+
+    columns:
+      - name: total_sessions
+        data_tests:
+          - not_null
+
+      - name: product_view_sessions
+        data_tests:
+          - not_null
+
+      - name: add_to_cart_sessions
+        data_tests:
+          - not_null
+
+      - name: checkout_sessions
+        data_tests:
+          - not_null
+
+      - name: purchase_sessions
+        data_tests:
+          - not_null
+
+      - name: session_to_view_rate
+        data_tests:
+          - not_null
+
+      - name: view_to_cart_rate
+        data_tests:
+          - not_null
+
+      - name: cart_to_checkout_rate
+        data_tests:
+          - not_null
+
+      - name: checkout_to_purchase_rate
+        data_tests:
+          - not_null
+
+      - name: overall_conversion_rate
+        data_tests:
+          - not_null
+  - name: agg_funnel_by_device
+    description: Website funnel performance segmented by device type.
+
+    columns:
+      - name: device_type
+        data_tests:
+          - not_null
+          - unique
+          - accepted_values:
+              arguments:
+                values:
+                  - mobile
+                  - desktop
+                  - tablet
+
+      - name: total_sessions
+        data_tests:
+          - not_null
+
+      - name: product_view_sessions
+        data_tests:
+          - not_null
+
+      - name: add_to_cart_sessions
+        data_tests:
+          - not_null
+
+      - name: checkout_sessions
+        data_tests:
+          - not_null
+
+      - name: purchase_sessions
+        data_tests:
+          - not_null
+
+      - name: overall_conversion_rate
+        data_tests:
+          - not_null
+  - name: agg_funnel_by_channel
+    description: Website funnel performance segmented by acquisition channel.
+
+    columns:
+      - name: acquisition_channel
+        data_tests:
+          - not_null
+          - unique
+          - accepted_values:
+              arguments:
+                values:
+                  - organic_search
+                  - paid_search
+                  - social
+                  - email
+                  - direct
+                  - referral
+
+      - name: total_sessions
+        data_tests:
+          - not_null
+
+      - name: product_view_sessions
+        data_tests:
+          - not_null
+
+      - name: add_to_cart_sessions
+        data_tests:
+          - not_null
+
+      - name: checkout_sessions
+        data_tests:
+          - not_null
+
+      - name: purchase_sessions
+        data_tests:
+          - not_null
+
+      - name: overall_conversion_rate
+        data_tests:
+          - not_null
+  - name: agg_monthly_funnel
+    description: Monthly website funnel performance based on synthetic session behavior.
+
+    columns:
+      - name: month
+        data_tests:
+          - not_null
+          - unique
+
+      - name: total_sessions
+        data_tests:
+          - not_null
+
+      - name: product_view_sessions
+        data_tests:
+          - not_null
+
+      - name: add_to_cart_sessions
+        data_tests:
+          - not_null
+
+      - name: checkout_sessions
+        data_tests:
+          - not_null
+
+      - name: purchase_sessions
+        data_tests:
+          - not_null
+
+      - name: overall_conversion_rate
+        data_tests:
+          - not_null
+  - name: agg_funnel_dropoff
+    description: Funnel-stage conversion and drop-off metrics for synthetic website behavior.
+
+    columns:
+      - name: stage_order
+        data_tests:
+          - not_null
+          - unique
+
+      - name: from_stage
+        data_tests:
+          - not_null
+
+      - name: to_stage
+        data_tests:
+          - not_null
+
+      - name: starting_sessions
+        data_tests:
+          - not_null
+
+      - name: converted_sessions
+        data_tests:
+          - not_null
+
+      - name: dropped_sessions
+        data_tests:
+          - not_null
+
+      - name: conversion_rate
+        data_tests:
+          - not_null
+
+      - name: dropoff_rate
+        data_tests:
+          - not_null
+  - name: agg_marketing_channel_performance
+    description: Paid marketing channel efficiency metrics based on synthetic marketing spend data.
+
+    columns:
+      - name: acquisition_channel
+        data_tests:
+          - not_null
+          - unique
+          - accepted_values:
+              arguments:
+                values:
+                  - paid_search
+                  - social
+                  - email
+
+      - name: impressions
+        data_tests:
+          - not_null
+
+      - name: ad_clicks
+        data_tests:
+          - not_null
+
+      - name: total_spend
+        data_tests:
+          - not_null
+
+      - name: ctr
+        data_tests:
+          - not_null
+
+      - name: cpc
+        data_tests:
+          - not_null
+
+      - name: cpm
+        data_tests:
+          - not_null
+  - name: agg_marketing_funnel_performance
+    description: Paid acquisition channel performance combining synthetic marketing spend with website funnel outcomes.
+
+    columns:
+      - name: acquisition_channel
+        data_tests:
+          - not_null
+          - unique
+          - accepted_values:
+              arguments:
+                values:
+                  - paid_search
+                  - social
+                  - email
+
+      - name: impressions
+        data_tests:
+          - not_null
+
+      - name: ad_clicks
+        data_tests:
+          - not_null
+
+      - name: website_sessions
+        data_tests:
+          - not_null
+
+      - name: purchase_sessions
+        data_tests:
+          - not_null
+
+      - name: total_spend
+        data_tests:
+          - not_null
+
+      - name: cost_per_session
+        data_tests:
+          - not_null
+
+      - name: cost_per_purchase
+        data_tests:
+          - not_null
+  - name: agg_monthly_marketing_performance
+    description: Monthly paid acquisition performance combining synthetic marketing spend with website funnel outcomes.
+
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - month
+              - acquisition_channel
+
+    columns:
+      - name: month
+        data_tests:
+          - not_null
+
+      - name: acquisition_channel
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - paid_search
+                  - social
+                  - email
+
+      - name: impressions
+        data_tests:
+          - not_null
+
+      - name: ad_clicks
+        data_tests:
+          - not_null
+
+      - name: website_sessions
+        data_tests:
+          - not_null
+
+      - name: purchase_sessions
+        data_tests:
+          - not_null
+
+      - name: total_spend
+        data_tests:
+          - not_null
+
+      - name: cost_per_session
+        data_tests:
+          - not_null
+
+      - name: cost_per_purchase
+        data_tests:
+          - not_null
+  - name: agg_marketing_roas
+    description: Paid-channel ROAS analysis using synthetic attributed purchase value and marketing spend.
+
+    columns:
+      - name: acquisition_channel
+        data_tests:
+          - not_null
+          - unique
+          - accepted_values:
+              arguments:
+                values:
+                  - paid_search
+                  - social
+                  - email
+
+      - name: purchase_transactions
+        data_tests:
+          - not_null
+
+      - name: attributed_purchase_value
+        data_tests:
+          - not_null
+
+      - name: avg_purchase_value
+        data_tests:
+          - not_null
+
+      - name: total_spend
+        data_tests:
+          - not_null
+
+      - name: roas
+        data_tests:
+          - not_null
+  - name: agg_monthly_marketing_roas
+    description: Monthly paid-channel ROAS analysis using synthetic purchase value and marketing spend.
+
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - month
+              - acquisition_channel
+
+    columns:
+      - name: month
+        data_tests:
+          - not_null
+
+      - name: acquisition_channel
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - paid_search
+                  - social
+                  - email
+
+      - name: purchase_transactions
+        data_tests:
+          - not_null
+
+      - name: attributed_purchase_value
+        data_tests:
+          - not_null
+
+      - name: total_spend
+        data_tests:
+          - not_null
+
+      - name: roas
+        data_tests:
+          - not_null
+  - name: agg_experiment_variant_performance
+    description: Experiment performance summary by variant for the synthetic checkout A/B test.
+
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - experiment_id
+              - variant
+
+    columns:
+      - name: experiment_id
+        data_tests:
+          - not_null
+
+      - name: variant
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - control
+                  - treatment
+
+      - name: exposed_visitors
+        data_tests:
+          - not_null
+
+      - name: conversions
+        data_tests:
+          - not_null
+
+      - name: conversion_rate
+        data_tests:
+          - not_null
+  - name: agg_experiment_summary
+    description: One-row-per-experiment summary comparing control and treatment conversion performance.
+
+    columns:
+      - name: experiment_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: control_visitors
+        data_tests:
+          - not_null
+
+      - name: treatment_visitors
+        data_tests:
+          - not_null
+
+      - name: control_conversion_rate
+        data_tests:
+          - not_null
+
+      - name: treatment_conversion_rate
+        data_tests:
+          - not_null
+
+      - name: absolute_uplift
+        data_tests:
+          - not_null
+
+      - name: relative_uplift
+        data_tests:
+          - not_null
+  - name: agg_experiment_decision
+    description: Final business-facing experiment decision summary combining validity, significance, uplift, and projected impact.
+
+    columns:
+      - name: experiment_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: control_conversion_rate
+        data_tests:
+          - not_null
+
+      - name: treatment_conversion_rate
+        data_tests:
+          - not_null
+
+      - name: absolute_uplift
+        data_tests:
+          - not_null
+
+      - name: relative_uplift
+        data_tests:
+          - not_null
+
+      - name: p_value
+        data_tests:
+          - not_null
+
+      - name: ci_lower
+        data_tests:
+          - not_null
+
+      - name: ci_upper
+        data_tests:
+          - not_null
+
+      - name: srm_p_value
+        data_tests:
+          - not_null
+
+      - name: srm_detected
+        data_tests:
+          - not_null
+
+      - name: is_statistically_significant
+        data_tests:
+          - not_null
+
+      - name: estimated_incremental_purchases
+        data_tests:
+          - not_null
+
+      - name: experiment_decision
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - Investigate Experiment
+                  - No Significant Effect
+                  - Recommend Treatment
+                  - Recommend Control

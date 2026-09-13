@@ -1,0 +1,22 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+
+    tables:
+      - name: customers
+      - name: orders
+      - name: order_items
+      - name: products
+      - name: payments
+      - name: reviews
+      - name: sellers
+      - name: geolocation
+      - name: category_translation
+      - name: website_sessions
+      - name: website_events
+      - name: marketing_spend
+      - name: website_purchases
+      - name: experiment_checkout
+      - name: experiment_results

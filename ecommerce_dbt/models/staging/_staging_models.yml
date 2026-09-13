@@ -1,0 +1,449 @@
+version: 2
+
+models:
+  - name: stg_orders
+    description: Cleaned and standardized order-level data.
+
+    columns:
+      - name: order_id
+        description: Unique identifier for each order.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        description: Customer identifier associated with the order.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_customers')
+                field: customer_id
+
+
+  - name: stg_customers
+    description: Cleaned customer data containing order-level and persistent customer identifiers.
+
+    columns:
+      - name: customer_id
+        description: Unique customer identifier associated with an order.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: customer_unique_id
+        description: Persistent identifier used to recognize the same customer across multiple orders.
+        data_tests:
+          - not_null
+
+
+  - name: stg_order_items
+    description: Cleaned order-item level data with product, seller, price, and freight information.
+
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - order_id
+              - order_item_id
+
+    columns:
+      - name: order_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+
+      - name: order_item_id
+        data_tests:
+          - not_null
+
+      - name: product_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_products')
+                field: product_id
+
+      - name: seller_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_sellers')
+                field: seller_id
+
+
+  - name: stg_products
+    description: Cleaned product master data.
+
+    columns:
+      - name: product_id
+        description: Unique identifier for each product.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: product_photos_qty
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+
+
+  - name: stg_payments
+    description: Cleaned payment-level data for customer orders.
+
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - order_id
+              - payment_sequential
+
+    columns:
+      - name: order_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+
+      - name: payment_sequential
+        data_tests:
+          - not_null
+
+      - name: payment_type
+        data_tests:
+          - not_null
+
+      - name: payment_installments
+        data_tests:
+          - not_null
+
+      - name: payment_value
+        data_tests:
+          - not_null
+
+
+  - name: stg_reviews
+    description: Cleaned review-level data for customer order feedback.
+
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - review_id
+              - order_id
+
+    columns:
+      - name: review_id
+        data_tests:
+          - not_null
+
+      - name: order_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+
+      - name: review_score
+        data_tests:
+          - not_null
+
+
+  - name: stg_sellers
+    description: Cleaned seller master data.
+
+    columns:
+      - name: seller_id
+        description: Unique identifier for each seller.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: seller_zip_code_prefix
+        data_tests:
+          - not_null
+
+      - name: seller_state
+        data_tests:
+          - not_null
+
+
+  - name: stg_geolocation
+    description: Cleaned geolocation data containing ZIP-level geographic observations.
+
+    columns:
+      - name: geolocation_zip_code_prefix
+        data_tests:
+          - not_null
+
+      - name: geolocation_lat
+        data_tests:
+          - not_null
+
+      - name: geolocation_lng
+        data_tests:
+          - not_null
+
+      - name: geolocation_state
+        data_tests:
+          - not_null
+
+
+  - name: stg_category_translation
+    description: Product category translation lookup from Portuguese to English.
+
+    columns:
+      - name: product_category_name
+        description: Portuguese product category name.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: product_category_name_english
+        description: English translation of the product category.
+        data_tests:
+          - not_null
+  - name: stg_website_sessions
+    description: Cleaned synthetic website session data for funnel and acquisition analysis.
+
+    columns:
+      - name: session_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: visitor_id
+        data_tests:
+          - not_null
+
+      - name: session_start
+        data_tests:
+          - not_null
+
+      - name: device_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - mobile
+                  - desktop
+                  - tablet
+
+      - name: acquisition_channel
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - organic_search
+                  - paid_search
+                  - social
+                  - email
+                  - direct
+                  - referral
+  - name: stg_website_events
+    description: Cleaned synthetic website event data for funnel analysis.
+
+    columns:
+      - name: session_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_website_sessions')
+                field: session_id
+
+      - name: visitor_id
+        data_tests:
+          - not_null
+
+      - name: event_timestamp
+        data_tests:
+          - not_null
+
+      - name: event_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - session_start
+                  - product_view
+                  - add_to_cart
+                  - checkout
+                  - purchase
+  - name: stg_marketing_spend
+    description: Cleaned synthetic daily marketing spend data by paid acquisition channel.
+
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - spend_date
+              - acquisition_channel
+
+    columns:
+      - name: spend_date
+        data_tests:
+          - not_null
+
+      - name: acquisition_channel
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - paid_search
+                  - social
+                  - email
+
+      - name: impressions
+        data_tests:
+          - not_null
+
+      - name: ad_clicks
+        data_tests:
+          - not_null
+
+      - name: spend
+        data_tests:
+          - not_null
+  - name: stg_website_purchases
+    description: Cleaned synthetic website purchase transactions used for digital revenue and ROAS analysis.
+
+    columns:
+      - name: transaction_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: session_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_website_sessions')
+                field: session_id
+
+      - name: visitor_id
+        data_tests:
+          - not_null
+
+      - name: purchase_timestamp
+        data_tests:
+          - not_null
+
+      - name: purchase_value
+        data_tests:
+          - not_null
+  - name: stg_experiment_checkout
+    description: Cleaned synthetic checkout experiment data with one row per exposed visitor.
+
+    columns:
+      - name: experiment_id
+        data_tests:
+          - not_null
+
+      - name: visitor_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: variant
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - control
+                  - treatment
+
+      - name: exposure_timestamp
+        data_tests:
+          - not_null
+
+      - name: converted
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - 0
+                  - 1
+  - name: stg_experiment_results
+    description: Cleaned final statistical summary for the synthetic checkout experiment.
+
+    columns:
+      - name: experiment_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: control_visitors
+        data_tests:
+          - not_null
+
+      - name: treatment_visitors
+        data_tests:
+          - not_null
+
+      - name: control_conversion_rate
+        data_tests:
+          - not_null
+
+      - name: treatment_conversion_rate
+        data_tests:
+          - not_null
+
+      - name: absolute_uplift
+        data_tests:
+          - not_null
+
+      - name: relative_uplift
+        data_tests:
+          - not_null
+
+      - name: z_statistic
+        data_tests:
+          - not_null
+
+      - name: p_value
+        data_tests:
+          - not_null
+
+      - name: ci_lower
+        data_tests:
+          - not_null
+
+      - name: ci_upper
+        data_tests:
+          - not_null
+
+      - name: estimated_incremental_purchases
+        data_tests:
+          - not_null
+      - name: srm_chi2_statistic
+        data_tests:
+          - not_null
+
+      - name: srm_p_value
+        data_tests:
+          - not_null
+
+      - name: srm_detected
+        data_tests:
+          - not_null
+
+      - name: is_statistically_significant
+        data_tests:
+          - not_null
