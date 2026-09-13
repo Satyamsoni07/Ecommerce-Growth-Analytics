@@ -27,7 +27,7 @@ It combines **Python, PostgreSQL, advanced SQL, dbt, customer analytics, funnel 
 This isn't just a dashboard — it's a full analytics system built to answer real business questions across **Customer, Product, Operations, Growth, and Experimentation**.
 
 <div align="center">
-<img src="powerbi/screenshots/01_executive_overview.png" alt="CommerceIQ Executive Overview Dashboard" width="100%">
+<img src="powerbi/screenshots/E-commerce.png" alt="CommerceIQ Executive Overview Dashboard" width="100%">
 
 <sub><i>Executive Overview page — Power BI dashboard (synthetic data, for portfolio purposes)</i></sub>
 </div>
@@ -298,64 +298,6 @@ ecommerce-growth-analytics/
 
 ---
 
-## ▶️ How to Run the Project
-
-**1. Clone the repository**
-```bash
-git clone <YOUR_GITHUB_REPOSITORY_URL>
-cd ecommerce-growth-analytics
-```
-
-**2. Create & activate a Python environment**
-```bash
-python -m venv .venv
-.venv\Scripts\activate      # Windows
-```
-
-**3. Install dependencies**
-```bash
-pip install -r requirements.txt
-```
-
-**4. Configure PostgreSQL** — create a `.env` file:
-```env
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=ecommerce_analytics
-DB_USER=ecommerce_user
-DB_PASSWORD=YOUR_PASSWORD
-```
-> ⚠️ Never commit your real `.env` file.
-
-**5. Load raw + synthetic data**
-```bash
-python scripts/generate_clickstream.py
-python scripts/generate_marketing_spend.py
-python scripts/generate_website_purchases.py
-python scripts/generate_experiment_data.py
-python scripts/load_synthetic_to_postgres.py
-```
-
-**6. Run dbt**
-```bash
-cd ecommerce_dbt
-dbt debug
-dbt build
-```
-
-**7. Run experiment analysis**
-```bash
-python scripts/check_experiment_srm.py
-python scripts/analyze_experiment_conversion.py
-```
-
-**8. Open Power BI**
-```text
-powerbi/CommerceIQ_Ecommerce_Growth_Analytics.pbix
-```
-
----
-
 ## 🧠 Skills Demonstrated
 
 <table>
@@ -397,16 +339,10 @@ powerbi/CommerceIQ_Ecommerce_Growth_Analytics.pbix
 
 ## 👤 Author
 
-**Madhur Mittal**
+**Satyam soni**
 *MS in Artificial Intelligence & Data Science — ABV-IIITM Gwalior*
 
 Target roles: **Data Analyst · Business Analyst · Product Analyst · Growth Analyst · Analytics Engineer · Data Science / AI**
 
 ---
 
-<div align="center">
-
-⭐ **If you find this project useful, consider giving it a star!**
-Feedback and discussion around analytics engineering, experimentation, BI, and data science are always welcome.
-
-</div>
